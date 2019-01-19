@@ -1,58 +1,111 @@
-import math
-import numpy as np
+from math import *
 
-def feval(funcName, *args):
-    return eval(funcName)(*args)
+def main():
+    a = Dual(1, 1)
+    print((a * a).extract())
+    print((2 * a).extract())
 
-
-def mult(vector, scalar):
-    newvector = [0]*len(vector)
-    for i in range(len(vector)):
-        newvector[i] = vector[i]*scalar
-    return newvector
+    b = Dual(pi, 1)
+    print(b.sin())
+    print(b.cos())
 
 
-def backwardEuler(func, yinit, x_range, h):
-    numOfODEs = len(yinit)
-    sub_intervals = int((x_range[-1] - x_range[0])/h)
+class Dual:
+    def __init__(self, x, dx):
+        self.x = x
+        self.dx = dx
 
-    x = x_range[0]
-    y = yinit
+    def __str__(self):
+        return "Dual(" + str(self.x) + ", " + str(self.dx) + ")"
 
-    xsol = [x]
-    ysol = [y[0]]
+    def value(self):
+        return self.x
 
-    for i in range(sub_intervals):
-        yprime = feval(func, x+h, y)
+    def slope(self):
+        return self.dx
 
-        yp = mult(yprime, (1/(1+h)))
+    def extract(self):
+        return (self.x, self.dx)
 
-        for j in range(numOfODEs):
-            y[j] = y[j] + h*yp[j]
+    def __neg__(self):
+        return Dual(-self.x, -self.dx)
+    
+    def __add__(self, other):
+        if isinstance(other, self.__class__):
+            return Dual(self.x + other.x, self.dx + other.dx)
+        elif isinstance(other, int) or isinstance(other, float):
+            return Dual(self.x + other, self.dx)
+        else:
+            raise TypeError("unsupported operand type(s) for +: '{}' and '{}'").format(self.__class__, type(other))
 
-        x += h
-        xsol.append(x)
+    def __sub__(self, other):
+        if isinstance(other, self.__class__):
+            return Dual(self.x - other.x, self.dx - other.dx)
+        elif isinstance(other, int) or isinstance(other, float):
+            return Dual(self.x - other, self.dx)
+        else:
+            raise TypeError("unsupported operand type(s) for -: '{}' and '{}'").format(self.__class__, type(other))
 
-        for r in range(len(y)):
-            ysol.append(y[r])  # Saves all new y's
+    def __mul__(self, other):
+        if isinstance(other, self.__class__):
+            return Dual(self.x * other.x, self.x * other.dx + self.dx * other.x)
+        elif isinstance(other, int) or isinstance(other, float):
+            return Dual(self.x * other, self.dx)
+        else:
+            raise TypeError("unsupported operand type(s) for *: '{}' and '{}'").format(self.__class__, type(other))
 
-    return [xsol, ysol]
+    def __div__(self, other):
+        if isinstance(other, self.__class__):
+            return Dual(self.x / other.x, (self.dx * other.x - self.x * other.dx) / other.x ** 2)
+        elif isinstance(other, int) or isinstance(other, float):
+            return Dual(self.x / other, self.dx)
+        else:
+            raise TypeError("unsupported operand type(s) for /: '{}' and '{}'").format(self.__class__, type(other))
+
+    def __radd__(self, other):
+        return self + other
+
+    def __rsub__(self, other):
+        return other + (-self)
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __rdiv__(self, other):
+        if isinstance(other, self.__class__):
+            return other / self
+        elif isinstance(other, int) or isinstance(other, float):
+            return Dual(other, 0) / self
+        else:
+            raise TypeError("unsupported operand type(S) for /: '{}' and '{}'").format(self.__class__, type(other))
+
+    def __pow__(self, other):
+        if isinstance(other, self.__class__):
+            if other.dx == 0:
+                return Dual(self.x ** other.x, (other.x * self.x ** (other.x - 1)) * self.dx)
+            elif self.dx == 0:
+                return Dual(self.x ** other.x, self.x ** other.x * log(self.x) * other.dx)
+            else:
+                return Dual(self.x ** other.x, (log(self.x) * other.dx + other.x * self.dx) / self.x * self.x ** other.x)
+
+    def sin(self):
+        return Dual(sin(self.x), cos(self.x) * self.dx)
+
+    def cos(self):
+        return Dual(cos(self.x), -sin(self.x) * self.dx)
+
+    def tan(self):
+        return Dual(tan(self.x), (1 + tan(self.x)**2) * self.dx)
+
+    def exp(self):
+        return Dual(exp(self.x), exp(self.x) * self.dx)
+
+    def log(self):
+        return Dual(log(self.x), self.dx / self.x)
 
 
-def test(t, y):
-    '''
-    We define our ODEs in this function.
-    '''
-    dy = [0] * len(y)
-    dy[0] = - 0.3 * y[0]
-    return dy
+def dual(x, dx):
+    return Dual(x, dx)
 
-
-h = 1e-3
-x = [0.0, 10.0]
-yinit = [5.0]
-
-
-[ts, ys] = backwardEuler('test', yinit, x, h)
-np.savetxt('data/py_bdf1.csv', np.column_stack((np.array(ts), np.array(ys))), fmt="%f", delimiter=",")
-
+if __name__ == '__main__':
+    main()
