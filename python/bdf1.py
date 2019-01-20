@@ -1,13 +1,15 @@
 from math import *
+import numpy as np
+
 
 def main():
-    a = Dual(1, 1)
-    print((a * a).extract())
-    print((2 * a).extract())
+    xs = [1., 1.]
+    print(jacobian(xs, f))
 
-    b = Dual(pi, 1)
-    print(b.sin())
-    print(b.cos())
+def f(xs):
+    t = xs[0]
+    x = xs[1]
+    return [t**2 * x * 3]
 
 
 class Dual:
@@ -36,7 +38,7 @@ class Dual:
         elif isinstance(other, int) or isinstance(other, float):
             return Dual(self.x + other, self.dx)
         else:
-            raise TypeError("unsupported operand type(s) for +: '{}' and '{}'").format(self.__class__, type(other))
+            raise TypeError("unsupported operand type(s) for +: '{}' and '{}'".format(self.__class__, type(other)))
 
     def __sub__(self, other):
         if isinstance(other, self.__class__):
@@ -44,7 +46,7 @@ class Dual:
         elif isinstance(other, int) or isinstance(other, float):
             return Dual(self.x - other, self.dx)
         else:
-            raise TypeError("unsupported operand type(s) for -: '{}' and '{}'").format(self.__class__, type(other))
+            raise TypeError("unsupported operand type(s) for -: '{}' and '{}'".format(self.__class__, type(other)))
 
     def __mul__(self, other):
         if isinstance(other, self.__class__):
@@ -52,7 +54,7 @@ class Dual:
         elif isinstance(other, int) or isinstance(other, float):
             return Dual(self.x * other, self.dx)
         else:
-            raise TypeError("unsupported operand type(s) for *: '{}' and '{}'").format(self.__class__, type(other))
+            raise TypeError("unsupported operand type(s) for *: '{}' and '{}'".format(self.__class__, type(other)))
 
     def __div__(self, other):
         if isinstance(other, self.__class__):
@@ -60,7 +62,7 @@ class Dual:
         elif isinstance(other, int) or isinstance(other, float):
             return Dual(self.x / other, self.dx)
         else:
-            raise TypeError("unsupported operand type(s) for /: '{}' and '{}'").format(self.__class__, type(other))
+            raise TypeError("unsupported operand type(s) for /: '{}' and '{}'".format(self.__class__, type(other)))
 
     def __radd__(self, other):
         return self + other
@@ -69,7 +71,7 @@ class Dual:
         return other + (-self)
 
     def __rmul__(self, other):
-        return self * other
+        return self.__mul__(other)
 
     def __rdiv__(self, other):
         if isinstance(other, self.__class__):
@@ -106,6 +108,44 @@ class Dual:
 
 def dual(x, dx):
     return Dual(x, dx)
+
+def merge_dual(xs, dxs):
+    l = len(xs)
+    result = [None] * l
+    for i in range(l):
+        result[i] = Dual(xs[i], dxs[i])
+    return result
+
+def conv_dual(xs):
+    l = len(xs)
+    result = [None] * l
+    for i in range(l):
+        result[i] = Dual(xs[i], 0.)
+    return result
+
+def slopes(xs):
+    l = len(xs)
+    result = [None] * l
+    for i in range(l):
+        result[i] = xs[i].slope()
+    return result
+
+def jacobian(x, f):
+    l = len(x)
+    x_var = merge_dual(x, np.ones(l))
+    x_const = conv_dual(x)
+    l2 = len(f(x_const))
+    J = np.zeros((l2, l))
+    x_temp = x_const.copy()
+
+    for i in range(l):
+        x_temp[i] = x_var[i]
+        dual_temp = f(x_temp.copy())
+        slope_temp = slopes(dual_temp)
+        for j in range(l2):
+            J[j, i] = slope_temp[j]
+        x_temp = x_const.copy()
+    return J
 
 if __name__ == '__main__':
     main()
