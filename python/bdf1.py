@@ -3,14 +3,16 @@ import numpy as np
 
 
 def main():
-    xs = [1., 1.]
-    print(jacobian(xs, f))
+    y0 = np.array([5.])
+    n = newton_iter(model, 0., y0, 1e-4, 1e-15)
+    print(n)
+    #result = backward_euler(model, 0., y0, 1e-4, 1e-15, 100000)
+    #np.savetxt('data/python_bdf1.csv', result, fmt="%f", delimiter=",")
 
-def f(xs):
-    t = xs[0]
-    x = xs[1]
-    return [t**2 * x * 3]
-
+def model(t, ys):
+    k = 0.3
+    y = ys[0]
+    return [-k * y]
 
 class Dual:
     def __init__(self, x, dx):
@@ -52,7 +54,7 @@ class Dual:
         if isinstance(other, self.__class__):
             return Dual(self.x * other.x, self.x * other.dx + self.dx * other.x)
         elif isinstance(other, int) or isinstance(other, float):
-            return Dual(self.x * other, self.dx)
+            return Dual(self.x * other, self.dx * other)
         else:
             raise TypeError("unsupported operand type(s) for *: '{}' and '{}'".format(self.__class__, type(other)))
 
@@ -60,7 +62,7 @@ class Dual:
         if isinstance(other, self.__class__):
             return Dual(self.x / other.x, (self.dx * other.x - self.x * other.dx) / other.x ** 2)
         elif isinstance(other, int) or isinstance(other, float):
-            return Dual(self.x / other, self.dx)
+            return Dual(self.x / other, self.dx / other)
         else:
             raise TypeError("unsupported operand type(s) for /: '{}' and '{}'".format(self.__class__, type(other)))
 
@@ -79,7 +81,7 @@ class Dual:
         elif isinstance(other, int) or isinstance(other, float):
             return Dual(other, 0) / self
         else:
-            raise TypeError("unsupported operand type(S) for /: '{}' and '{}'").format(self.__class__, type(other))
+            raise TypeError("unsupported operand type(S) for /: '{}' and '{}'".format(self.__class__, type(other)))
 
     def __pow__(self, other):
         if isinstance(other, self.__class__):
@@ -89,6 +91,10 @@ class Dual:
                 return Dual(self.x ** other.x, self.x ** other.x * log(self.x) * other.dx)
             else:
                 return Dual(self.x ** other.x, (log(self.x) * other.dx + other.x * self.dx) / self.x * self.x ** other.x)
+        elif isinstance(other, int) or isinstance(other, float):
+            return Dual(self.x ** other, other * self.x ** (other - 1) * self.dx)
+        else:
+            raise TypeError("unsupported operand type(S) for ^: '{}' and '{}'".format(self.__class__, type(other)))
 
     def sin(self):
         return Dual(sin(self.x), cos(self.x) * self.dx)
@@ -125,10 +131,18 @@ def conv_dual(xs):
 
 def slopes(xs):
     l = len(xs)
-    result = [None] * l
+    result = np.empty(l)
     for i in range(l):
         result[i] = xs[i].slope()
     return result
+
+def values(xs):
+    l = len(xs)
+    result = np.empty(l)
+    for i in range(l):
+        result[i] = xs[i].slope()
+    return result
+    
 
 def jacobian(x, f):
     l = len(x)
@@ -146,6 +160,40 @@ def jacobian(x, f):
             J[j, i] = slope_temp[j]
         x_temp = x_const.copy()
     return J
+
+def newton_iter(f, t, y, h, rtol):
+    n = len(y)
+    y_curr = y + h * values(f(Dual(t, 0.), conv_dual(y)))
+    err = 1
+    
+    def fy(ys): # Vec<Dual> -> Vec<Dual>
+        return f(Dual(t, 0.), ys)
+
+    max_iter = 0
+
+    while err >= rtol and max_iter <= 10:
+        Dfy = jacobian(y_curr, fy)
+        DF = np.eye(n) - h * Dfy # DF = I - h Df_y
+        DFinv = np.linalg.pinv(DF)
+        F = y_curr - y - h * values(f(Dual(t + h, 0.), conv_dual(y_curr)))
+        y_prev = y_curr
+        y_curr = y_prev - np.matmul(DFinv, F)
+        err = np.linalg.norm(y_curr - y_prev);
+        max_iter += 1
+
+    return y_curr
+
+def backward_euler(f, t, y, h, rtol, num):
+    records = np.zeros((num+1, len(y) + 1))
+    y_curr = y
+    records[0, :] = np.append(t, y)
+
+    for i in range(num):
+        y_curr = newton_iter(f, t, y_curr, h, rtol)
+        t += h
+        records[i+1, :] = np.append(t, y_curr)
+
+    return records
 
 if __name__ == '__main__':
     main()
