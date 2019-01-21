@@ -4,10 +4,8 @@ import numpy as np
 
 def main():
     y0 = np.array([5.])
-    n = newton_iter(model, 0., y0, 1e-4, 1e-15)
-    print(n)
-    #result = backward_euler(model, 0., y0, 1e-4, 1e-15, 100000)
-    #np.savetxt('data/python_bdf1.csv', result, fmt="%f", delimiter=",")
+    result = backward_euler(model, 0., y0, 1e-4, 1e-15, 100000)
+    np.savetxt('data/python_bdf1.csv', result, fmt="%f", delimiter=",")
 
 def model(t, ys):
     k = 0.3
@@ -140,7 +138,7 @@ def values(xs):
     l = len(xs)
     result = np.empty(l)
     for i in range(l):
-        result[i] = xs[i].slope()
+        result[i] = xs[i].value()
     return result
     
 
@@ -163,7 +161,8 @@ def jacobian(x, f):
 
 def newton_iter(f, t, y, h, rtol):
     n = len(y)
-    y_curr = y + h * values(f(Dual(t, 0.), conv_dual(y)))
+    # Initial Guess by forward euler
+    y_curr = y + h * values(f(Dual(t, 0.), conv_dual(y.copy())))
     err = 1
     
     def fy(ys): # Vec<Dual> -> Vec<Dual>
@@ -175,8 +174,8 @@ def newton_iter(f, t, y, h, rtol):
         Dfy = jacobian(y_curr, fy)
         DF = np.eye(n) - h * Dfy # DF = I - h Df_y
         DFinv = np.linalg.pinv(DF)
-        F = y_curr - y - h * values(f(Dual(t + h, 0.), conv_dual(y_curr)))
-        y_prev = y_curr
+        F = y_curr - y.copy() - h * values(f(Dual(t + h, 0.), conv_dual(y_curr)))
+        y_prev = y_curr.copy()
         y_curr = y_prev - np.matmul(DFinv, F)
         err = np.linalg.norm(y_curr - y_prev);
         max_iter += 1
