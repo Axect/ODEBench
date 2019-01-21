@@ -1,3 +1,3 @@
 | Command | Mean [ms] | Min…Max [ms] |
 |:---|---:|---:|
-| `./oxide/target/release/gl4` | 1.6 ± 0.2 | 1.3…3.0 |
+| `./oxide/target/release/gl4` | 99.3 ± 2.5 | 95.6…104.4 |

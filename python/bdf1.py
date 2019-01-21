@@ -5,7 +5,7 @@ import numpy as np
 def main():
     y0 = np.array([5.])
     result = backward_euler(model, 0., y0, 1e-4, 1e-15, 100000)
-    np.savetxt('data/python_bdf1.csv', result, fmt="%f", delimiter=",")
+    np.savetxt('data/python_bdf1.csv', result, fmt="%.6f", delimiter=",")
 
 def model(t, ys):
     k = 0.3

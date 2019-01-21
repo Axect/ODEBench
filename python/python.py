@@ -11,9 +11,9 @@ def model(y,t):
 y0 = 5
 
 # time points
-t = np.linspace(0,10,1000)
+t = np.linspace(0,10,10000)
 
 # solve ODE
 y = odeint(model,y0,t).flatten()
 result = np.column_stack((t, y))
-np.savetxt('data/python.csv', result, fmt="%f", delimiter=",")
+np.savetxt('data/python.csv', result, fmt="%.7f", delimiter=",")
