@@ -1,8 +1,0 @@
-bdf1 = readtable("bdf1.csv");
-gl4 = readtable("gl4.csv");
-rk4 = readtable("rk4.csv");
-
-result = [rk4.mean(1), rk4.mean(2), bdf1.mean(2), bdf1.mean(1), gl4.mean(1)];
-labels = ["Rust(RK4)", "Python(RK4)", "Rust(BDF1)", "Python(BDF1)", "Rust(GL4)"];
-
-plot(1:5, result, 'k-o')
