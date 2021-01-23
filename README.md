@@ -7,7 +7,8 @@
 | Library | Version | Mean [ms] |
 | :------ | :-----: | --------: |
 | Peroxide | 0.7.6  | 13.8 ± 1.1 |  
-| scipy `odeint` | 1.2.0 | 174.0 ± 3.5 |
+| Peroxide | 0.30.2  | 2.4 ± 0.1 |  
+| scipy `odeint` | 1.6.0 | 170.5 ± 4.5 |
 
 ## 2. Backward Differentiation Formual 1st order (BDF1)
 
@@ -25,3 +26,4 @@
 | Library | Version | Mean [ms] |
 | :------ | :-----: | --------: |
 | Peroxide | 0.7.6 | 99.3 ± 2.5 |  
+| Peroxide | 0.30.2 | 99.3 ± 2.9 |  
